@@ -3,8 +3,13 @@ package com.example.sharedjavagemini;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class CalculateETA {
+
+    private static Long initialEstimatedTotalTimeMillis = null; // Store initial estimate
 
     public static String calculateEstimatedFinishTime(LocalDateTime startTime, long totalRecords, long recordsProcessed) {
         if (startTime == null || totalRecords <= 0 || recordsProcessed <= 0 || recordsProcessed > totalRecords) {
@@ -14,18 +19,21 @@ public class CalculateETA {
         LocalDateTime now = LocalDateTime.now();
         Duration elapsedTime = Duration.between(startTime, now);
 
-        if (recordsProcessed == totalRecords){
-            return "Job already completed";
+        if (recordsProcessed == totalRecords) {
+            return "Job already completed.";
         }
 
         double progress = (double) recordsProcessed / totalRecords;
         if (progress >= 1.0) {
-            return "Job already completed";
+            return "Job already completed.";
         }
 
-        double remainingProgress = 1.0 - progress;
-        double estimatedTotalTimeMillis = elapsedTime.toMillis() / progress;
-        long estimatedRemainingTimeMillis = (long) (estimatedTotalTimeMillis * remainingProgress);
+        if (initialEstimatedTotalTimeMillis == null) {
+            // Calculate initial estimate only once
+            initialEstimatedTotalTimeMillis = (long) (elapsedTime.toMillis() / progress);
+        }
+
+        long estimatedRemainingTimeMillis = (long) (initialEstimatedTotalTimeMillis * (1.0 - progress));
 
         LocalDateTime estimatedFinishTime = now.plus(Duration.ofMillis(estimatedRemainingTimeMillis));
 
@@ -34,26 +42,31 @@ public class CalculateETA {
     }
 
     public static void main(String[] args) {
-        LocalDateTime startTime = LocalDateTime.now().minusHours(1).minusMinutes(30);
-        long totalRecords = 10000;
-        long recordsProcessed = 3500;
+        LocalDateTime startTime = LocalDateTime.now().minusHours(1);
+        long totalRecords = 100000;
+        long recordsProcessed = 1000;
 
         String estimatedFinishTime = calculateEstimatedFinishTime(startTime, totalRecords, recordsProcessed);
-        System.out.println(estimatedFinishTime);
+        System.out.println("Initial ETA: " + estimatedFinishTime);
 
-        //Example already finished
-        startTime = LocalDateTime.now().minusMinutes(10);
-        totalRecords = 1000;
-        recordsProcessed = 1000;
+        // Simulate progress
+        recordsProcessed = 10000;
         estimatedFinishTime = calculateEstimatedFinishTime(startTime, totalRecords, recordsProcessed);
-        System.out.println(estimatedFinishTime);
+        System.out.println("ETA after 10% progress: " + estimatedFinishTime);
 
-        //Example invalid input
-        startTime = LocalDateTime.now().minusMinutes(10);
-        totalRecords = 1000;
-        recordsProcessed = 2000;
+        recordsProcessed = 50000;
         estimatedFinishTime = calculateEstimatedFinishTime(startTime, totalRecords, recordsProcessed);
-        System.out.println(estimatedFinishTime);
+        System.out.println("ETA after 50% progress: " + estimatedFinishTime);
+
+        recordsProcessed = 90000;
+        estimatedFinishTime = calculateEstimatedFinishTime(startTime, totalRecords, recordsProcessed);
+        System.out.println("ETA after 90% progress: " + estimatedFinishTime);
+
+        recordsProcessed = 100000;
+        estimatedFinishTime = calculateEstimatedFinishTime(startTime, totalRecords, recordsProcessed);
+        System.out.println("ETA after 100% progress: " + estimatedFinishTime);
 
     }
+}
+
 }
