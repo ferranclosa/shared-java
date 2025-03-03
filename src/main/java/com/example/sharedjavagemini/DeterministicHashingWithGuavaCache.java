@@ -1,18 +1,29 @@
 package com.example.sharedjavagemini;
+
 import com.github.javafaker.Faker;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
-public class DeterministicHashingWithCache {
+public class DeterministicHashingWithGuavaCache {
 
     private static final String HASH_ALGORITHM = "SHA-256";
-    private static final Faker faker = new Faker(new Locale("fr-FR"));
-    private static final Map<String, String> cache = new HashMap<>(); // Simple in-memory cache
+    private static final Faker faker = new Faker(new Locale("en-US"));
+
+    private static final LoadingCache<String, String> cache = CacheBuilder.newBuilder()
+            .maximumSize(1000) // Adjust cache size as needed
+            .build(new CacheLoader<String, String>() {
+                @Override
+                public String load(String key) throws Exception {
+                    return generateFakeValueUncached(key); // Delegate to the uncached generation
+                }
+            });
 
     public static String deterministicHash(String input, String salt) {
         try {
@@ -38,15 +49,12 @@ public class DeterministicHashingWithCache {
         return hexString.toString();
     }
 
-    public static String generateFakeValue(String input, String salt, String column) {
-        String cacheKey = input + salt + column; // Create a unique key for the cache
+    private static String generateFakeValueUncached(String cacheKey) {
 
-        if (cache.containsKey(cacheKey)) {
-            System.out.println("Cache hit for: " + cacheKey); // Show cache usage
-            return cache.get(cacheKey);
-        }
-
-        System.out.println("Cache miss for: " + cacheKey); // Show cache usage
+        String[] parts = cacheKey.split(":::");
+        String input = parts[0];
+        String salt = parts[1];
+        String column = parts[2];
 
         String hashed = deterministicHash(input, salt);
 
@@ -58,26 +66,28 @@ public class DeterministicHashingWithCache {
         Random random = new Random(seed);
         Faker seededFaker = new Faker(random);
 
-        String fakeValue;
         switch (column.toLowerCase()) {
             case "name":
-                fakeValue = seededFaker.name().fullName();
-                break;
+                return seededFaker.name().fullName();
             case "address":
-                fakeValue = seededFaker.address().fullAddress();
-                break;
+                return seededFaker.address().fullAddress();
             case "creditaccountnumber":
-                fakeValue = seededFaker.finance().creditCard();
-                break;
+                return seededFaker.finance().creditCard();
             case "phone":
-                fakeValue = seededFaker.phoneNumber().phoneNumber();
-                break;
+                return seededFaker.phoneNumber().phoneNumber();
             default:
-                fakeValue = "Unknown Column";
+                return "Unknown Column";
         }
+    }
 
-        cache.put(cacheKey, fakeValue); // Store the generated value in the cache
-        return fakeValue;
+    public static String generateFakeValue(String input, String salt, String column) {
+        String cacheKey = input + ":::" + salt + ":::" + column;
+        try {
+            return cache.get(cacheKey);
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+            return null; // Handle cache loading error
+        }
     }
 
     private static long bytesToLong(String hexString) {
@@ -110,21 +120,17 @@ public class DeterministicHashingWithCache {
         String primaryKeyValue2 = "456";
         String salt = "mySecretSalt";
 
-        // First call - cache miss
         String updateSQL1 = generateUpdateSQL(tableName, primaryKeyColumn1, primaryKeyColumn2,
                 primaryKeyValue1, primaryKeyValue2, salt);
         System.out.println(updateSQL1);
 
-        // Second call - cache hit
         String updateSQL2 = generateUpdateSQL(tableName, primaryKeyColumn1, primaryKeyColumn2,
                 primaryKeyValue1, primaryKeyValue2, salt);
         System.out.println(updateSQL2);
 
-        // Third call, but a different column. Will also use the cache if the input primary keys are the same.
         String fakeName = generateFakeValue(primaryKeyValue1 + primaryKeyValue2, salt, "name");
         System.out.println("Fake Name: " + fakeName);
         String fakeAddress = generateFakeValue(primaryKeyValue1 + primaryKeyValue2, salt, "address");
         System.out.println("Fake Address: " + fakeAddress);
-
     }
 }
