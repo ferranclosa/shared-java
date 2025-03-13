@@ -62,4 +62,31 @@ public class PopulateSQL {
 
         return sql;
     }
+
+    for (int i = 0; i < parameters.length; i++) {
+        Object param = parameters[i];
+
+        if (param == null) {
+            pstmt.setNull(i + 1, java.sql.Types.NULL);
+        } else if (param instanceof String) {
+            pstmt.setString(i + 1, (String) param);
+        } else if (param instanceof Integer) {
+            pstmt.setInt(i + 1, (Integer) param);
+        } else if (param instanceof Long) {
+            pstmt.setLong(i + 1, (Long) param);
+        } else if (param instanceof Double) {
+            pstmt.setDouble(i + 1, (Double) param);
+        } else if (param instanceof java.sql.Date) {
+            pstmt.setDate(i + 1, (java.sql.Date) param);
+        } else if (param instanceof java.sql.Timestamp) {
+            pstmt.setTimestamp(i + 1, (java.sql.Timestamp) param);
+        } else if (param instanceof Clob) {
+            pstmt.setClob(i + 1, (Clob) param);
+        } else if (param instanceof java.util.Date) {
+            pstmt.setTimestamp(i + 1, new java.sql.Timestamp(((java.util.Date) param).getTime()));
+        } else {
+            // Fallback for unknown types
+            pstmt.setObject(i + 1, param);
+        }
+    }
 }
