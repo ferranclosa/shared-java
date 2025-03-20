@@ -1,0 +1,17 @@
+.json-viewer {
+    font-family: Arial, sans-serif;
+    line-height: 1.5;
+    color: #333;
+}
+
+.json-viewer strong {
+    color: #0077aa;
+}
+
+.json-value {
+    color: #5c6bc0;
+}
+
+.json-viewer div {
+    margin-bottom: 5px;
+}
